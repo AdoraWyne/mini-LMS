@@ -213,7 +213,8 @@ describe("POST /api/consultations", () => {
   });
 
   it("returns 400 with field details for a missing field", async () => {
-    const { firstName: _omitted, ...withoutFirstName } = validBooking;
+    const withoutFirstName: Partial<typeof validBooking> = { ...validBooking };
+    delete withoutFirstName.firstName;
     const { status, body } = await apiA.post(PATH, withoutFirstName);
     expect(status).toBe(400);
     expect(errorOf(body).details?.fieldErrors.firstName).toBeDefined();
