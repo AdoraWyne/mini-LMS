@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/api/auth";
 import { mapDbError } from "@/lib/api/errors";
-import { ok, parseInput, withErrorHandling } from "@/lib/api/http";
+import { ok, parseInput, withErrorHandling, type PageResult } from "@/lib/api/http";
 import { CONSULTATION_COLUMNS, toConsultationDto } from "@/lib/api/mappers";
 import { adminListQuerySchema } from "@/lib/api/schemas";
 import { createClient } from "@/lib/supabase/server";
@@ -50,6 +50,6 @@ export const GET = withErrorHandling(async (request: Request) => {
   return ok(pageResult(data.map(toConsultationDto), page, pageSize, count ?? 0));
 });
 
-function pageResult<T>(items: T[], page: number, pageSize: number, total: number) {
+function pageResult<T>(items: T[], page: number, pageSize: number, total: number): PageResult<T> {
   return { items, page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
 }

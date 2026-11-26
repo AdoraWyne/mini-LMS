@@ -6,16 +6,19 @@ import { StatusBadge } from "./status-badge";
 /**
  * Pure: given the same props, renders the same table. No fetching or mutations here:
  * the page passes `renderActions` (the dashboard's per-row controls). Without it there's
- * no Actions column, so a read-only view can reuse this table.
+ * no Actions column, so a read-only view can reuse this table. `showStudent` adds a short
+ * account id column (admin view), so bookings from different accounts can be told apart.
  */
 export function ConsultationTable({
   consultations,
   now,
   renderActions,
+  showStudent = false,
 }: {
   consultations: ConsultationDto[];
   now: Date;
   renderActions?: (consultation: ConsultationDto) => ReactNode;
+  showStudent?: boolean;
 }) {
   return (
     // shadcn's <Table> already wraps itself in an overflow-x-auto container; min-w makes
@@ -24,6 +27,7 @@ export function ConsultationTable({
       <TableHeader>
         <TableRow>
           <TableHead>When</TableHead>
+          {showStudent && <TableHead>Student</TableHead>}
           <TableHead>Name</TableHead>
           <TableHead>Reason</TableHead>
           <TableHead>Status</TableHead>
@@ -39,6 +43,12 @@ export function ConsultationTable({
             <TableCell className="whitespace-nowrap">
               {new Date(consultation.scheduledAt).toLocaleString()}
             </TableCell>
+            {showStudent && (
+              <TableCell className="font-mono text-xs" title={consultation.studentId}>
+                {/* First 8 characters of the account id; the full id on hover. */}
+                {consultation.studentId.slice(0, 8)}
+              </TableCell>
+            )}
             <TableCell className="whitespace-nowrap">
               {consultation.firstName} {consultation.lastName}
             </TableCell>

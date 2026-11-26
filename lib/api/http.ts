@@ -7,6 +7,9 @@ export type ApiSuccess<T> = { data: T };
 /** Every error response: `{ error: { message, details? } }`. */
 export type ApiErrorBody = { error: { message: string; details?: ValidationDetails } };
 
+/** A page of a paginated list (the admin route's `data`). Shared with the browser hook. */
+export type PageResult<T> = { items: T[]; page: number; pageSize: number; total: number; totalPages: number };
+
 // Standard Response.json (not NextResponse): route handlers can return any Response,
 // and these helpers stay plain functions that are easy to unit test.
 
