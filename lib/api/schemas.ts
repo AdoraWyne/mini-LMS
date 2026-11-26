@@ -1,7 +1,14 @@
 import { z } from "zod";
 
+// SHARED with the browser: the API routes validate with these schemas, and the booking form
+// runs the same schema before sending, so the rules are written once and can't drift.
+// Keep this file free of server-only imports (enforced by ESLint, see eslint.config.mjs).
+
 // All objects are z.strictObject: unknown keys are a 400, never silently dropped
 // (decision 8; see docs on mass assignment / strong params).
+
+/** Max length per text field (after trimming). Also read by the booking form's counters. */
+export const FIELD_LIMITS = { firstName: 100, lastName: 100, reason: 1000 } as const;
 
 /** Text field: trimmed first, so whitespace-only fails and length excludes surrounding spaces. */
 function trimmedText(label: string, max: number) {
@@ -21,9 +28,9 @@ const futureDateTime = z.iso
   .refine((value) => new Date(value).getTime() > Date.now(), "Must be in the future");
 
 export const createConsultationSchema = z.strictObject({
-  firstName: trimmedText("First name", 100),
-  lastName: trimmedText("Last name", 100),
-  reason: trimmedText("Reason", 1000),
+  firstName: trimmedText("First name", FIELD_LIMITS.firstName),
+  lastName: trimmedText("Last name", FIELD_LIMITS.lastName),
+  reason: trimmedText("Reason", FIELD_LIMITS.reason),
   scheduledAt: futureDateTime,
 });
 export type CreateConsultationInput = z.infer<typeof createConsultationSchema>;
