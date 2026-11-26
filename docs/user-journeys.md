@@ -122,7 +122,7 @@ The body is always one action: `complete`, `uncomplete`, `cancel`, or `reschedul
 - **Given** a DELETE request to any route, **then** **405**. Nothing is ever hard-deleted from the app.
 - **Given** an unexpected database error, **then** **500** with a generic message. Internal details aren't sent to the client.
 - **Given** a request breaks several rules at once, **then** checks run in this order: 401 → 403 → 400 → 404 → 409 (a non-UUID id returns 404 at the 400 step).
-- **Given** any failed action in the UI, **then** the user sees the error message, and the list still shows the server's true state (TanStack Query refetches).
+- **Given** any failed action in the UI, **then** the user sees the error message, and the list still shows the server's true state (TanStack Query refetches), except when the failure was caused by the row changing state (e.g. cancelled in another tab). The row then updates to its new status, which explains what happened.
 
 ## 7. Security: someone skips our API
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BookedNotice } from "@/components/consultations/booked-notice";
 import { ConsultationTable } from "@/components/consultations/consultation-table";
+import { RowActions } from "@/components/consultations/row-actions";
 import { Button } from "@/components/ui/button";
 import { useConsultations } from "@/hooks/use-consultations";
 import { useNow } from "@/hooks/use-now";
@@ -52,7 +53,11 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
-        <ConsultationTable consultations={data} now={now} />
+        <ConsultationTable
+          consultations={data}
+          now={now}
+          renderActions={(consultation) => <RowActions consultation={consultation} now={now} />}
+        />
       )}
     </div>
   );

@@ -1,17 +1,21 @@
+import type { ReactNode } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ConsultationDto } from "@/lib/api/mappers";
 import { StatusBadge } from "./status-badge";
 
 /**
- * Pure: given the same consultations and `now`, renders the same table. No fetching here.
- * The Actions column is filled in 6c.
+ * Pure: given the same props, renders the same table. No fetching or mutations here:
+ * the page passes `renderActions` (the dashboard's per-row controls). Without it there's
+ * no Actions column, so a read-only view can reuse this table.
  */
 export function ConsultationTable({
   consultations,
   now,
+  renderActions,
 }: {
   consultations: ConsultationDto[];
   now: Date;
+  renderActions?: (consultation: ConsultationDto) => ReactNode;
 }) {
   return (
     // shadcn's <Table> already wraps itself in an overflow-x-auto container; min-w makes
@@ -23,11 +27,13 @@ export function ConsultationTable({
           <TableHead>Name</TableHead>
           <TableHead>Reason</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          {renderActions && <TableHead className="text-right">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {consultations.map((consultation) => (
+          // Key by id, never the index: rescheduling re-sorts the list, and an index key would
+          // move a row's state (open dialog, pending request) onto a different booking.
           <TableRow key={consultation.id}>
             {/* Shown in the viewer's own timezone (decision 10). */}
             <TableCell className="whitespace-nowrap">
@@ -45,7 +51,7 @@ export function ConsultationTable({
             <TableCell>
               <StatusBadge consultation={consultation} now={now} />
             </TableCell>
-            <TableCell className="text-right">{/* 6c: row actions */}</TableCell>
+            {renderActions && <TableCell className="text-right">{renderActions(consultation)}</TableCell>}
           </TableRow>
         ))}
       </TableBody>
