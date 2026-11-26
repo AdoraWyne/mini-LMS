@@ -257,10 +257,17 @@ begin
   -- ---- UPDATE ----
   -- Checks follow the API order: 400 (what you sent) before 409 (current state).
 
-  -- Reschedule: scheduled -> scheduled.
+  -- Reschedule: scheduled -> scheduled, and the time must actually change.
+  -- Without the "unchanged" check, any no-op update on a scheduled row (e.g. a direct
+  -- `set status = 'scheduled'`, an "uncomplete" of something that isn't completed)
+  -- would pass as a "reschedule" to the same time.
   if old.status = 'scheduled' and new.status = 'scheduled' then
     if new.scheduled_at <= now() then
       raise exception 'New consultation time must be in the future'
+        using errcode = 'LM400';
+    end if;
+    if new.scheduled_at is not distinct from old.scheduled_at then
+      raise exception 'New consultation time must be different from the current one'
         using errcode = 'LM400';
     end if;
     if old.scheduled_at <= now() then

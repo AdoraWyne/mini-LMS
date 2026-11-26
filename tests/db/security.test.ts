@@ -320,6 +320,22 @@ describe("updating: blocked", () => {
     expect(error?.code).toBe("LM409");
   });
 
+  it.each([
+    ["re-setting status to scheduled", () => ({ status: "scheduled" as const })],
+    ["setting scheduled_at to its current value", (current: string) => ({ scheduled_at: current })],
+  ])("a no-op scheduled -> scheduled update (%s) is blocked (trigger LM400)", async (_label, change) => {
+    const scheduledAt = daysFromNow(3);
+    const id = await seedConsultation({ studentId: studentA.id, scheduledAt });
+    const before = await readConsultationAsAdmin(id);
+    const { error } = await clientA
+      .from("consultations")
+      .update(change(before.scheduled_at))
+      .eq("id", id);
+    expect(error?.code).toBe("LM400");
+    const after = await readConsultationAsAdmin(id);
+    expect(after.updated_at).toBe(before.updated_at);
+  });
+
   it("rescheduling to a past time is blocked (trigger LM400)", async () => {
     const id = await seedConsultation({ studentId: studentA.id, scheduledAt: daysFromNow(2) });
     const { error } = await clientA
