@@ -47,11 +47,19 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
+  // API routes answer with status codes, not redirects (decision 14).
+  // getClaims() above still runs for them, so the session cookie is refreshed;
+  // each route handler checks auth itself and returns a 401 JSON error.
+  // Match "/api" or "/api/..." exactly, so a page like "/apiary" isn't skipped.
+  const { pathname } = request.nextUrl;
+  const isApiRoute = pathname === "/api" || pathname.startsWith("/api/");
+
   if (
-    request.nextUrl.pathname !== "/" &&
+    pathname !== "/" &&
     !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
+    !isApiRoute &&
+    !pathname.startsWith("/login") &&
+    !pathname.startsWith("/auth")
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
