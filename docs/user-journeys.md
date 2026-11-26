@@ -105,7 +105,10 @@ The body is always one action: `complete`, `uncomplete`, `cancel`, or `reschedul
 
 - **Given** the logged-in user is an admin, **when** they open `/admin`, **then** they see every consultation in the system (all students, all statuses), read-only, with student name, reason, time and status.
 - **Given** there are more consultations than one page holds, **when** the admin moves between pages, **then** the next page loads. Offset pagination (`?page=&pageSize=`), default 20, max 100, sorted `scheduled_at asc, id asc` (decision 16).
-- **Given** an admin, **when** they send `pageSize=1000` or `page=-1`, **then** **400**.
+- **Given** an admin, **when** they load a page, **then** the response is `{ data: { items, page, pageSize, total, totalPages } }` (same `{ data }` envelope as every route).
+- **Given** an admin, **when** they ask for a page past the end, **then** **200** with empty `items`. The collection exists; that page is just empty.
+- **Given** an admin, **when** they send `pageSize=1000`, `page=-1` or an unknown param (e.g. `sort=reason`), **then** **400**.
+- **Given** a student, **when** they send bad params to the admin route, **then** **403** (role is checked before input).
 - **Given** a logged-in student, **when** they call GET `/api/admin/consultations`, **then** **403**.
 - **Given** a logged-out visitor, **when** they call it, **then** **401**.
 - **Given** the admin page, **then** there are no edit, cancel or complete controls.
