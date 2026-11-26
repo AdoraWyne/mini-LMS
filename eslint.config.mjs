@@ -10,6 +10,10 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // Global ignores (an object with only `ignores`): generated files, not our code.
+  // ESLint 9 flat config doesn't skip .next/ on its own, so without this
+  // `npm run lint` reports thousands of problems from Next's build output.
+  { ignores: [".next/**", "next-env.d.ts"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     // Deny by default: NO file may import from tests/, except files inside tests/.
