@@ -10,8 +10,10 @@ All open questions have been decided. See [Decisions](#decisions-from-open-quest
 - **Logged-out visitor**: no session.
 - "Now" depends on where the rule is checked:
   - **New time must be in the future** (book, reschedule): checked by zod in the API route, using the Next.js server clock (`Date.now()`).
-  - **Rules about the existing consultation's time** (complete, cancel, reschedule): checked in the UPDATE's WHERE clause (decision 9a), using the database clock (`now()`).
-  - Both clocks are synced in practice, so they agree to within milliseconds.
+  - **Rules about the existing consultation's time** (complete, cancel, reschedule): checked in the UPDATE's WHERE clause (decision 9a), also using the **Next.js server clock**. supabase-js/PostgREST filters only take literal values, so the WHERE clause can't call the database's `now()`.
+  - **Backstop:** the business-rule trigger re-checks every rule with the **database clock** (`now()`).
+  - Both clocks are synced in practice, so they agree to within milliseconds. If they disagree right at the boundary, the trigger rejects the update (`LM409` → **409**, or `LM400` → **400**), never a 500.
+  - Using the DB clock in the WHERE clause too would need a Postgres function per action (RPC): "with more time" (decision 17).
 
 ---
 
@@ -89,6 +91,7 @@ The body is always one action: `complete`, `uncomplete`, `cancel`, or `reschedul
 - **Given** a `scheduled` consultation whose time has passed, **when** Student A tries to reschedule, **then** **409**.
 - **Given** a `completed` or `cancelled` consultation, **when** Student A tries to reschedule, **then** **409**. Cancelled rows are also blocked by RLS.
 - **Given** a future `scheduled` consultation, **when** Student A reschedules it to a time in the past, **then** **400** (zod, same rule as booking).
+- **Given** a future `scheduled` consultation, **when** Student A reschedules it to the exact same time, **then** **400** ("New consultation time must be different from the current one"; enforced by the trigger, `LM400`).
 - **Given** `{action:"reschedule"}` with no `scheduledAt`, **then** **400**.
 
 ### Ownership
@@ -170,8 +173,8 @@ Two kinds of "no" from the database:
 - **Given** that booking, **when** an admin in London views it, **then** they see it in London time (e.g. 23:00 the previous day). Same moment, different clock.
 - **Given** Student A changes their device timezone after booking, **then** the booking shows at the new local time but is still the same moment.
 - **Given** Student A picks a local time that doesn't exist because of a daylight-saving jump (e.g. 02:30 when clocks go 02:00 → 03:00), **then** the browser shifts it to a valid moment, and the stored UTC time is unambiguous.
-- **Given** Student A's device clock is wrong, **then** the `min` attribute and the disabled checkbox may be wrong in the UI, but the server (Next.js clock for new times, DB clock for existing ones) still enforces the real rules.
-- **Given** a consultation scheduled for exactly "now", **then** it counts as passed: it can be completed and can no longer be cancelled or rescheduled. Complete needs `scheduled_at <= now()`; cancel/reschedule need `scheduled_at > now()`.
+- **Given** Student A's device clock is wrong, **then** the `min` attribute and the disabled checkbox may be wrong in the UI, but the server (the Next.js clock in zod and the UPDATE's WHERE clause, the DB clock in the trigger) still enforces the real rules.
+- **Given** a consultation scheduled for exactly "now", **then** it counts as passed: it can be completed and can no longer be cancelled or rescheduled. Complete needs `scheduled_at <= now`; cancel/reschedule need `scheduled_at > now` (same boundary in the API's WHERE clause and in the trigger).
 - **Given** the booking form has been open for a long time and the chosen time is now in the past, **when** Student A submits, **then** the server returns **400** and the UI shows the error.
 - **Given** a `scheduled` consultation that has passed and wasn't completed (badge: "Awaiting completion"), **then** the only action left is Complete. It can't be cancelled or rescheduled (a side effect of decision 6a).
 
