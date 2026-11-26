@@ -24,10 +24,11 @@ export async function GET(request: NextRequest) {
       redirect(next);
     } else {
       // redirect the user to an error page with some instructions
-      redirect(`/auth/error?error=${error?.message}`);
+      // Encode: the message is free text (spaces, "&", "#"...) going into a query string.
+      redirect(`/auth/error?error=${encodeURIComponent(error.message)}`);
     }
   }
 
   // redirect the user to an error page with some instructions
-  redirect(`/auth/error?error=No token hash or type`);
+  redirect(`/auth/error?error=${encodeURIComponent("No token hash or type")}`);
 }
