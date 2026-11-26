@@ -18,6 +18,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // Run test FILES one after another. They share one local database, so a parallel file
+    // inserting bookings could shift offset-pagination pages between two admin requests
+    // and make the "pages don't overlap" check flaky.
+    fileParallelism: false,
     // Tests talk to the real local Supabase over HTTP, so allow a bit more than the 5s default.
     testTimeout: 15_000,
     hookTimeout: 30_000,
