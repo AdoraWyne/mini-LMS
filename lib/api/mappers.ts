@@ -15,6 +15,13 @@ export type ConsultationDto = {
   updatedAt: string;
 };
 
+/**
+ * The columns every consultation query selects. Explicit instead of "*": a column added
+ * to the table later doesn't leak into API responses until someone adds it here and to the DTO.
+ */
+export const CONSULTATION_COLUMNS =
+  "id, student_id, first_name, last_name, reason, scheduled_at, status, created_at, updated_at";
+
 /** Postgres returns e.g. "2026-12-01T10:00:00+00:00"; the API always returns "2026-12-01T10:00:00.000Z". */
 function toIsoUtc(timestamp: string): string {
   return new Date(timestamp).toISOString();
