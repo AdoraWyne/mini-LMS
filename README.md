@@ -44,7 +44,8 @@ later: `npx supabase db reset` (this deletes all local data, including accounts)
 ### Accounts
 
 1. Sign up at <http://localhost:3000/auth/sign-up> with any email (e.g. `student@test.com`).
-2. Confirm it in **Mailpit**, the local inbox that catches every email: <http://127.0.0.1:54324>.
+2. No confirmation email locally (Supabase's local default): you're logged in and sent to the dashboard straight
+   away. Log out before creating the next account.
 3. Every new account is a **student**. Nobody can sign up as an admin.
 
 ### Making an admin
@@ -118,21 +119,21 @@ and the API repeats them to give friendly errors.
 
 ### Data model (`supabase/migrations/20261126121155_init.sql`)
 
-| Table | Columns | Notes |
-| --- | --- | --- |
-| `profiles` | `id` (→ `auth.users`), `role` (`student` \| `admin`, default `student`), `created_at` | Created by a trigger on sign-up. Roles live here, not in user metadata (which users can edit). |
+| Table           | Columns                                                                                                                                                                                    | Notes                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `profiles`      | `id` (→ `auth.users`), `role` (`student` \| `admin`, default `student`), `created_at`                                                                                                      | Created by a trigger on sign-up. Roles live here, not in user metadata (which users can edit).                          |
 | `consultations` | `id`, `student_id` (→ `auth.users`), `first_name`, `last_name`, `reason`, `scheduled_at` (`timestamptz`), `status` (`scheduled` \| `completed` \| `cancelled`), `created_at`, `updated_at` | Length checks on trimmed text. Indexes match the sort order: `(student_id, scheduled_at, id)` and `(scheduled_at, id)`. |
 
 Generated TypeScript types: `lib/database.types.ts` (`npm run db:types` after a migration).
 
 ### API
 
-| Method | Route | Who | Does |
-| --- | --- | --- | --- |
-| `GET` | `/api/consultations` | logged in | My consultations, oldest first |
-| `POST` | `/api/consultations` | logged in | Book. The owner always comes from the session |
-| `PATCH` | `/api/consultations/[id]` | owner | One action: `complete`, `uncomplete`, `cancel`, or `reschedule` + `scheduledAt` |
-| `GET` | `/api/admin/consultations?page=&pageSize=` | admin | Everything, paginated (default 20, max 100) |
+| Method  | Route                                      | Who       | Does                                                                            |
+| ------- | ------------------------------------------ | --------- | ------------------------------------------------------------------------------- |
+| `GET`   | `/api/consultations`                       | logged in | My consultations, oldest first                                                  |
+| `POST`  | `/api/consultations`                       | logged in | Book. The owner always comes from the session                                   |
+| `PATCH` | `/api/consultations/[id]`                  | owner     | One action: `complete`, `uncomplete`, `cancel`, or `reschedule` + `scheduledAt` |
+| `GET`   | `/api/admin/consultations?page=&pageSize=` | admin     | Everything, paginated (default 20, max 100)                                     |
 
 - **One envelope:** success `{ data }`, error `{ error: { message, details? } }`. camelCase in the API, snake_case
   in the database, converted in one mapper.
@@ -142,11 +143,11 @@ Generated TypeScript types: `lib/database.types.ts` (`npm run db:types` after a 
 
 ### State rules (one `status` column)
 
-| Action | Allowed when |
-| --- | --- |
-| Complete | `scheduled` and the time has passed |
-| Uncomplete | `completed` (an undo for a mistaken tick) |
-| Cancel | `scheduled` and still upcoming (soft cancel: the row is kept) |
+| Action     | Allowed when                                                                 |
+| ---------- | ---------------------------------------------------------------------------- |
+| Complete   | `scheduled` and the time has passed                                          |
+| Uncomplete | `completed` (an undo for a mistaken tick)                                    |
+| Cancel     | `scheduled` and still upcoming (soft cancel: the row is kept)                |
 | Reschedule | `scheduled`, still upcoming, and the new time is in the future and different |
 
 The same table lives in three places, kept in sync: `lib/api/transitions.ts` (the API's UPDATE `WHERE` clause),
@@ -175,11 +176,11 @@ tests/{unit,db,api}/       see Testing
 Three layers in the database, each answering a different question. Each was proven by tests that call Supabase
 directly as real users (`tests/db/security.test.ts`).
 
-| Layer | Question | Examples |
-| --- | --- | --- |
-| **Grants** | Which actions and columns may this role touch? | Logged-out (`anon`): nothing. Logged-in: read both tables; insert only the booking fields; update only `status` and `scheduled_at`; **no delete** anywhere. `profiles` is read-only, so nobody can change their own role. |
-| **RLS** | Which rows? | Your own consultations; admins can **read** all. Admins have no update policy, so the admin view is read-only even at the database level. |
-| **Trigger** | Which state changes? | The rules table above, with the database clock. Raises `LM400` (bad input) or `LM409` (not allowed now), which the API maps to `400` / `409`. |
+| Layer       | Question                                       | Examples                                                                                                                                                                                                                  |
+| ----------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Grants**  | Which actions and columns may this role touch? | Logged-out (`anon`): nothing. Logged-in: read both tables; insert only the booking fields; update only `status` and `scheduled_at`; **no delete** anywhere. `profiles` is read-only, so nobody can change their own role. |
+| **RLS**     | Which rows?                                    | Your own consultations; admins can **read** all. Admins have no update policy, so the admin view is read-only even at the database level.                                                                                 |
+| **Trigger** | Which state changes?                           | The rules table above, with the database clock. Raises `LM400` (bad input) or `LM409` (not allowed now), which the API maps to `400` / `409`.                                                                             |
 
 On top of that, in the app:
 
@@ -196,33 +197,33 @@ On top of that, in the app:
 
 ## Decisions and justifications
 
-| Topic | Decision | Why |
-| --- | --- | --- |
-| Where roles live | `public.profiles` table with a `role` enum | User metadata is editable by the user. A table is visible in migrations and protected by grants and RLS. |
-| Who enforces security | The API **and** the database | The publishable key gives browsers a direct door to the database, so it can't rely on the API. |
-| Supabase client in the API | The user's session client | RLS then applies to every query. The service-role key would bypass it. |
-| New users | A trigger creates a `student` profile; it never reads sign-up metadata | Nobody can sign up as an admin. |
-| Making admins | Manual SQL | An admin-management UI is out of scope. |
-| Cancel | Soft cancel (`status = 'cancelled'`) | Keeps history; cancelled rows stay visible with a badge. |
-| Completion | One `status` enum, no `is_completed` flag | Invalid combinations (cancelled **and** completed) can't exist. |
-| Completion is a toggle | Complete ⇄ uncomplete | The brief says "complete/incomplete", and it's the only way to undo a mistaken tick (admins are read-only). |
-| "Awaiting completion" | A UI-only label for `scheduled` + past | "Scheduled" would be misleading for a past time. Derived, not stored, so no cron job. |
-| API style | REST route handlers, not Server Actions | One explicit HTTP contract, testable directly (as the brief prefers). |
-| PATCH body | Action-based (`{ action: "cancel" }`, …) | Each action is one transition with one rule, instead of a generic "update any field". |
-| Atomic updates | The rules are in the UPDATE's `WHERE` clause | No check-then-update race. Two simultaneous cancels give exactly one `200` and one `409` (tested). |
-| Telling `404` from `409` | If the UPDATE changes 0 rows, look the row up **filtered to the caller** | Yours but not allowed → `409`; anything else → `404`, so other users' rows never leak. |
-| Clocks | The API uses the server clock; the trigger re-checks with the database clock | PostgREST filters can't call `now()`. At the exact boundary the trigger wins, with a `409`/`400`, never a `500`. |
-| Validation | zod 4 strict objects in every route; text trimmed before length checks | Runtime validation and mass-assignment protection. The booking form runs the **same** schema in the browser, so client and server rules can't drift. |
-| Dates | `timestamptz` (UTC); the browser converts with `toISOString()`; shown with `toLocaleString()` | One unambiguous moment; each viewer sees their own timezone. No Temporal API (not in Safari yet). |
-| Auth check on the server | `getClaims()`, never `getSession()` | It verifies the JWT signature. Trade-off: a revoked token stays valid until it expires; `getUser()` would catch that at the cost of a network call per request. |
-| `/api` in the proxy | The proxy refreshes the session but doesn't redirect `/api/*` | Pages get login redirects, APIs get `401` JSON. A redirect would make `fetch` silently load the login page's HTML. |
-| UI data fetching | TanStack Query, calling only our API | All rules in one place; cache invalidated after every mutation, success or error. |
-| Admin booking | Allowed | Admin = everything a student can do + a read-only view of all. |
-| Admin pagination | Offset (`page`, `pageSize`), sorted `scheduled_at, id`; past the end → `200` with no items | Simple and standard; `id` keeps pages stable when times are equal. |
-| Admin page for non-admins | The 404 page, served with HTTP **200** | With `cacheComponents`, the role check runs inside `<Suspense>`; once streaming starts the status is fixed. It's a UX gate only: the data is protected by the API (`403`) and RLS. A real `404` would need the check in the proxy. |
-| `on delete cascade` | On `student_id` | Deleting an account removes that person's data (privacy). Soft cancel is a different case. |
-| Migrations | One migration, edited during development | Nothing was deployed or shared, so a single readable schema file is clearer. In a shared project I'd add new migrations instead. |
-| Error codes from the trigger | Custom SQLSTATE `LM400` / `LM409` | A stable contract instead of matching message text. (PostgREST's `PT` codes were considered; they'd tie the database to PostgREST.) |
+| Topic                        | Decision                                                                                      | Why                                                                                                                                                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Where roles live             | `public.profiles` table with a `role` enum                                                    | User metadata is editable by the user. A table is visible in migrations and protected by grants and RLS.                                                                                                                           |
+| Who enforces security        | The API **and** the database                                                                  | The publishable key gives browsers a direct door to the database, so it can't rely on the API.                                                                                                                                     |
+| Supabase client in the API   | The user's session client                                                                     | RLS then applies to every query. The service-role key would bypass it.                                                                                                                                                             |
+| New users                    | A trigger creates a `student` profile; it never reads sign-up metadata                        | Nobody can sign up as an admin.                                                                                                                                                                                                    |
+| Making admins                | Manual SQL                                                                                    | An admin-management UI is out of scope.                                                                                                                                                                                            |
+| Cancel                       | Soft cancel (`status = 'cancelled'`)                                                          | Keeps history; cancelled rows stay visible with a badge.                                                                                                                                                                           |
+| Completion                   | One `status` enum, no `is_completed` flag                                                     | Invalid combinations (cancelled **and** completed) can't exist.                                                                                                                                                                    |
+| Completion is a toggle       | Complete ⇄ uncomplete                                                                         | The brief says "complete/incomplete", and it's the only way to undo a mistaken tick (admins are read-only).                                                                                                                        |
+| "Awaiting completion"        | A UI-only label for `scheduled` + past                                                        | "Scheduled" would be misleading for a past time. Derived, not stored, so no cron job.                                                                                                                                              |
+| API style                    | REST route handlers, not Server Actions                                                       | One explicit HTTP contract, testable directly (as the brief prefers).                                                                                                                                                              |
+| PATCH body                   | Action-based (`{ action: "cancel" }`, …)                                                      | Each action is one transition with one rule, instead of a generic "update any field".                                                                                                                                              |
+| Atomic updates               | The rules are in the UPDATE's `WHERE` clause                                                  | No check-then-update race. Two simultaneous cancels give exactly one `200` and one `409` (tested).                                                                                                                                 |
+| Telling `404` from `409`     | If the UPDATE changes 0 rows, look the row up **filtered to the caller**                      | Yours but not allowed → `409`; anything else → `404`, so other users' rows never leak.                                                                                                                                             |
+| Clocks                       | The API uses the server clock; the trigger re-checks with the database clock                  | PostgREST filters can't call `now()`. At the exact boundary the trigger wins, with a `409`/`400`, never a `500`.                                                                                                                   |
+| Validation                   | zod 4 strict objects in every route; text trimmed before length checks                        | Runtime validation and mass-assignment protection. The booking form runs the **same** schema in the browser, so client and server rules can't drift.                                                                               |
+| Dates                        | `timestamptz` (UTC); the browser converts with `toISOString()`; shown with `toLocaleString()` | One unambiguous moment; each viewer sees their own timezone. No Temporal API (not in Safari yet).                                                                                                                                  |
+| Auth check on the server     | `getClaims()`, never `getSession()`                                                           | It verifies the JWT signature. Trade-off: a revoked token stays valid until it expires; `getUser()` would catch that at the cost of a network call per request.                                                                    |
+| `/api` in the proxy          | The proxy refreshes the session but doesn't redirect `/api/*`                                 | Pages get login redirects, APIs get `401` JSON. A redirect would make `fetch` silently load the login page's HTML.                                                                                                                 |
+| UI data fetching             | TanStack Query, calling only our API                                                          | All rules in one place; cache invalidated after every mutation, success or error.                                                                                                                                                  |
+| Admin booking                | Allowed                                                                                       | Admin = everything a student can do + a read-only view of all.                                                                                                                                                                     |
+| Admin pagination             | Offset (`page`, `pageSize`), sorted `scheduled_at, id`; past the end → `200` with no items    | Simple and standard; `id` keeps pages stable when times are equal.                                                                                                                                                                 |
+| Admin page for non-admins    | The 404 page, served with HTTP **200**                                                        | With `cacheComponents`, the role check runs inside `<Suspense>`; once streaming starts the status is fixed. It's a UX gate only: the data is protected by the API (`403`) and RLS. A real `404` would need the check in the proxy. |
+| `on delete cascade`          | On `student_id`                                                                               | Deleting an account removes that person's data (privacy). Soft cancel is a different case.                                                                                                                                         |
+| Migrations                   | One migration, edited during development                                                      | Nothing was deployed or shared, so a single readable schema file is clearer. In a shared project I'd add new migrations instead.                                                                                                   |
+| Error codes from the trigger | Custom SQLSTATE `LM400` / `LM409`                                                             | A stable contract instead of matching message text. (PostgREST's `PT` codes were considered; they'd tie the database to PostgREST.)                                                                                                |
 
 ---
 
@@ -246,11 +247,11 @@ On top of that, in the app:
 **272 automated tests**, all against the **real local Supabase**. Nothing is mocked: mocking Supabase would remove
 exactly the grants, RLS and triggers under test.
 
-| Layer | Tests | What | How |
-| --- | --- | --- | --- |
-| Unit (`tests/unit/`) | 138 | zod schemas, row mapper, error → status mapping, state transitions, UI rules, date conversion, redirect check | Test-first (red → green → refactor) |
-| DB (`tests/db/`) | 47 | Grants, RLS and the trigger, by calling Supabase directly as real users with the publishable key | Written **after** the migration, to lock in its behaviour |
-| API (`tests/api/`) | 87 | All 4 routes over real HTTP with real session cookies: status-code order, every action in every state, ownership, concurrency, forged cookies, pagination | Test-first |
+| Layer                | Tests | What                                                                                                                                                      | How                                                       |
+| -------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Unit (`tests/unit/`) | 138   | zod schemas, row mapper, error → status mapping, state transitions, UI rules, date conversion, redirect check                                             | Test-first (red → green → refactor)                       |
+| DB (`tests/db/`)     | 47    | Grants, RLS and the trigger, by calling Supabase directly as real users with the publishable key                                                          | Written **after** the migration, to lock in its behaviour |
+| API (`tests/api/`)   | 87    | All 4 routes over real HTTP with real session cookies: status-code order, every action in every state, ownership, concurrency, forged cookies, pagination | Test-first                                                |
 
 Worth knowing:
 
@@ -300,14 +301,13 @@ were wrong):
 
 ## What I'd do with more time
 
-- **Playwright end-to-end tests and component tests** (with MSW for the API), to automate the manual test plan.
+- **Cypress end-to-end tests and component tests** (with MSW for the API), to automate the manual test plan.
 - **Postgres functions (RPC) for every write,** so the rules and the clock live in one place in the database instead
   of in both the API and the trigger.
-- **Cursor pagination with an estimated count** for the admin list: exact counts get slow on huge tables, and offset
-  pages shift when rows are inserted between page loads.
 - A **tutor role** with availability, and **double-booking prevention**.
 - **Admin role management** in the UI, with an **audit log**.
 - **Rate limiting** on the API.
 - **Temporal** for recurring bookings, once Safari supports it.
 - A **page-level toast** for errors from rows whose controls disappear (e.g. a booking cancelled in another tab while
   its dialog was open).
+- Make the UI more UX friendly.

@@ -167,7 +167,7 @@ TDD (red → green → refactor) from step 5 on. Test names come from `docs/user
 | API   | Vitest + real HTTP to the running app   | 4 routes, status-code order (journeys sections 2-6)                            | Test-first                                              |
 
 - Tests run against the **real local Supabase**. Never mock Supabase or the API (that would remove RLS/grants/triggers, the things under test).
-- No MSW, no Playwright, no component tests (time). Mention in README "with more time".
+- No MSW, no Cypress, no component tests (time). Mention in README "with more time".
 - Service-role key: `SUPABASE_SERVICE_ROLE_KEY` in gitignored `.env.test.local` (template: `.env.test.example`), never in `.env.local`,
   never `NEXT_PUBLIC_`. Only `tests/helpers/admin-client.ts` creates the client (`admin`, setup, cleanup and verification reads only); assertions use
   `asStudent()` / `asAdmin()` / `asAnon()`. ESLint `no-restricted-imports` blocks `tests/` imports everywhere except `tests/**`.
@@ -197,6 +197,6 @@ TDD (red → green → refactor) from step 5 on. Test names come from `docs/user
 - Testing "complete": bookings must be in the future, so the README tells reviewers to edit `scheduled_at`
   to a past time in Studio (runs as `postgres`, so RLS, grants and the business-rule trigger don't apply).
   Optional: a seed script doing the same. Ask me before adding one.
-- README "what I'd do with more time": Playwright E2E + component tests (MSW), tutor role + availability,
+- README "what I'd do with more time": Cypress E2E + component tests (MSW), tutor role + availability,
   double-booking prevention, admin role management + audit log, rate limiting, Temporal for recurring bookings,
   page-level toast for errors from rows whose controls disappear.
