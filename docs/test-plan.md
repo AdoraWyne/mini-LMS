@@ -18,7 +18,7 @@ Tick each box as you go. Write anything surprising in **Notes** at the bottom; i
 
 ## 0. Setup
 
-- [ ] **0.1 Start everything** (3 terminals):
+- [ ] **0.1 Start everything** (2 terminals; a 3rd is used in 0.3):
   ```bash
   npx supabase start        # terminal 1 (once)
   npm run dev               # terminal 2, keep running
@@ -33,9 +33,10 @@ Tick each box as you go. Write anything surprising in **Notes** at the bottom; i
   echo $?                   # must print 0
   ```
   Expect `Tests  272 passed` (or more). Always judge by the exit code (`0`), not by the last line of output.
-- [ ] **0.4 Create 3 accounts.** For each one, go to <http://localhost:3000/auth/sign-up>, sign up, then confirm
-  the email in **Mailpit** (<http://127.0.0.1:54324>, open the email, click the link). Use a password you'll remember,
-  e.g. `password123`.
+- [ ] **0.4 Create 3 accounts.** For each one, go to <http://localhost:3000/auth/sign-up> and sign up. Use a password
+  you'll remember, e.g. `password123`. No confirmation email is sent: local Supabase has
+  `enable_confirmations: false` (`supabase/config.jsonc`), so new users are confirmed and logged in at sign-up,
+  and you land on `/dashboard`. Log out before creating the next account.
   - `student-a@test.com`
   - `student-b@test.com`
   - `admin@test.com`

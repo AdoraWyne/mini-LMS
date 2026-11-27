@@ -40,7 +40,7 @@ export function SignUpForm({
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -48,7 +48,11 @@ export function SignUpForm({
         },
       });
       if (error) throw error;
-      router.push("/auth/sign-up-success");
+      // Whether signUp() returns a session depends on the Supabase config, not on this code:
+      // - email confirmations off (local default): the user is confirmed and logged in now.
+      // - confirmations on (typical in production): no session until they click the email link,
+      //   so /dashboard would just bounce them to login. Show "check your email" instead.
+      router.push(data.session ? "/dashboard" : "/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
