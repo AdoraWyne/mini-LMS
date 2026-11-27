@@ -1,110 +1,285 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# Mini LMS: consultation booking
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+A small learning-management app where students book, reschedule, cancel and complete consultations, and admins
+see every consultation in the system (read-only).
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+**Stack:** Next.js 16 (App Router) · TypeScript · Supabase (Postgres, Auth, `supabase-js`, `@supabase/ssr`) ·
+TanStack Query · zod 4 · shadcn/ui · Vitest. Started from the `with-supabase` template.
 
-## Features
+**Contents:** [Setup](#setup) · [Try it](#try-it-as-a-reviewer) · [Implementation](#implementation-summary) ·
+[Security model](#security-model) · [Decisions](#decisions-and-justifications) · [Assumptions](#assumptions) ·
+[Testing](#testing) · [With more time](#what-id-do-with-more-time)
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+---
 
-## Demo
+## Setup
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+### Prerequisites
 
-## Deploy to Vercel
+- **Node 24** (pinned in `.tool-versions`; `asdf install` or `mise install` picks it up)
+- **Docker** running (the Supabase CLI runs Postgres, Auth etc. locally in containers)
 
-Vercel deployment will guide you through creating a Supabase account and project.
+### Run the app
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
-
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
-
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
-
-## Clone and run locally
-
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
-
-2. Create a Next.js app using the Supabase Starter template npx command
-
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
-
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
-
-3. Use `cd` to change into the app's directory
-
-   ```bash
-   cd with-supabase-app
-   ```
-
-4. Rename `.env.example` to `.env.local` and update the following:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
+```bash
+npm install
+npx supabase start        # first run downloads the images; prints URLs and keys
+cp .env.example .env.local
 ```
 
-> [!NOTE]
-> This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-> Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-> See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
+Fill in `.env.local` from `npx supabase status -o env`:
 
-Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321          # API_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # PUBLISHABLE_KEY
+```
 
-5. You can now run the Next.js local development server:
+```bash
+npm run dev               # http://localhost:3000
+```
 
-   ```bash
-   npm run dev
+`npx supabase start` applies the migration in `supabase/migrations/` automatically. To start from a clean database
+later: `npx supabase db reset` (this deletes all local data, including accounts).
+
+### Accounts
+
+1. Sign up at <http://localhost:3000/auth/sign-up> with any email (e.g. `student@test.com`).
+2. Confirm it in **Mailpit**, the local inbox that catches every email: <http://127.0.0.1:54324>.
+3. Every new account is a **student**. Nobody can sign up as an admin.
+
+### Making an admin
+
+Admins are made by hand. In **Supabase Studio** (<http://127.0.0.1:54323>) → **SQL Editor**:
+
+```sql
+update public.profiles set role = 'admin'
+where id = (select id from auth.users where email = 'admin@test.com');
+```
+
+The admin sees an **Admin** link in the header after the next page load.
+
+### Run the tests
+
+```bash
+cp .env.test.example .env.test.local
+# set SUPABASE_SERVICE_ROLE_KEY to the value printed by:
+npx supabase status -o env | grep '^SERVICE_ROLE_KEY='
+
+npm run dev               # in another terminal: the API tests send real HTTP requests to the app
+npm run check             # tsc + ESLint + all tests; exit code 0 = everything passed
+```
+
+Unit and DB tests also run without the app (`npm test -- tests/unit tests/db`). Tests only ever run against local
+Supabase: a guard refuses any non-localhost URL.
+
+---
+
+## Try it (as a reviewer)
+
+1. Sign up two students and one admin (see [Accounts](#accounts) and [Making an admin](#making-an-admin)).
+2. As a student: **Book consultation** → fill in the form → you're back on the dashboard with "Booked".
+3. Reschedule or cancel an upcoming booking from its row.
+4. **Testing "complete":** a consultation can only be completed after its time has passed, and the app (and the
+   database) only accept bookings in the future. To try it, move one into the past in Studio's SQL Editor:
+   ```sql
+   update public.consultations set scheduled_at = now() - interval '1 hour'
+   where id = '<consultation id>';   -- or: where reason = '<the reason you typed>'
    ```
+   Studio runs as the `postgres` role, which the business rules deliberately don't restrict (so operators can fix
+   data). Reload the dashboard: the badge says "Awaiting completion" and the checkbox is enabled.
+5. As the admin: **Admin** in the header → every consultation, paginated, read-only.
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+A full manual checklist (including DevTools and direct-database attacks) is in
+[`docs/test-plan.md`](docs/test-plan.md). The acceptance criteria are in
+[`docs/user-journeys.md`](docs/user-journeys.md).
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+---
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+## Implementation summary
 
-## Feedback and issues
+**Starting point:** the `with-supabase` template. I removed its demo pages (`/protected`, the hero, the tutorial) and
+pointed the auth redirects (login, sign-up, password update) at `/dashboard`.
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+### Architecture
 
-## More Supabase examples
+```
+Browser (React, TanStack Query)
+   │  fetch("/api/...")  only our API, never Supabase tables (lib/client/api-client.ts)
+   ▼
+Next.js route handlers (app/api/**)          auth check, zod validation, business rules, status codes
+   │  supabase-js with the USER's session (never the service-role key)
+   ▼
+Postgres (Supabase)                          grants + RLS + business-rule trigger
+```
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+The Supabase URL and publishable key ship to every browser, so anyone can skip our API and call the database's
+REST API directly. That's why the database enforces the rules **on its own** (see [Security model](#security-model)),
+and the API repeats them to give friendly errors.
+
+### Data model (`supabase/migrations/20261126121155_init.sql`)
+
+| Table | Columns | Notes |
+| --- | --- | --- |
+| `profiles` | `id` (→ `auth.users`), `role` (`student` \| `admin`, default `student`), `created_at` | Created by a trigger on sign-up. Roles live here, not in user metadata (which users can edit). |
+| `consultations` | `id`, `student_id` (→ `auth.users`), `first_name`, `last_name`, `reason`, `scheduled_at` (`timestamptz`), `status` (`scheduled` \| `completed` \| `cancelled`), `created_at`, `updated_at` | Length checks on trimmed text. Indexes match the sort order: `(student_id, scheduled_at, id)` and `(scheduled_at, id)`. |
+
+Generated TypeScript types: `lib/database.types.ts` (`npm run db:types` after a migration).
+
+### API
+
+| Method | Route | Who | Does |
+| --- | --- | --- | --- |
+| `GET` | `/api/consultations` | logged in | My consultations, oldest first |
+| `POST` | `/api/consultations` | logged in | Book. The owner always comes from the session |
+| `PATCH` | `/api/consultations/[id]` | owner | One action: `complete`, `uncomplete`, `cancel`, or `reschedule` + `scheduledAt` |
+| `GET` | `/api/admin/consultations?page=&pageSize=` | admin | Everything, paginated (default 20, max 100) |
+
+- **One envelope:** success `{ data }`, error `{ error: { message, details? } }`. camelCase in the API, snake_case
+  in the database, converted in one mapper.
+- **Status codes, checked in this order:** `401` not logged in → `403` wrong role → `400` invalid input (a malformed
+  path id is a `404`) → `404` not found **or not yours** (never `403`, so the API doesn't reveal that a row exists)
+  → `409` not allowed in the current state or time. Unexpected errors → `500` with a generic message.
+
+### State rules (one `status` column)
+
+| Action | Allowed when |
+| --- | --- |
+| Complete | `scheduled` and the time has passed |
+| Uncomplete | `completed` (an undo for a mistaken tick) |
+| Cancel | `scheduled` and still upcoming (soft cancel: the row is kept) |
+| Reschedule | `scheduled`, still upcoming, and the new time is in the future and different |
+
+The same table lives in three places, kept in sync: `lib/api/transitions.ts` (the API's UPDATE `WHERE` clause),
+the database trigger, and `lib/consultations/display.ts` (what the UI shows). The UI version only decides what to
+display; if it's wrong, the API still answers `409`.
+
+### Folder layout
+
+```
+app/api/**                 route handlers (thin: auth → validate → one query → respond)
+app/(app)/**               logged-in pages: dashboard, booking form, admin
+lib/api/                   server side of the API: schemas (zod, shared with the browser), auth, errors,
+                           mappers, transitions, response helpers
+lib/client/                browser side: the API client, URL helpers
+lib/consultations/         pure UI rules: status labels, available actions, date conversion
+hooks/                     TanStack Query hooks (data fetching lives here, not in components)
+components/                presentation; tables and forms take data as props
+supabase/migrations/       the schema, RLS, grants and triggers
+tests/{unit,db,api}/       see Testing
+```
+
+---
+
+## Security model
+
+Three layers in the database, each answering a different question. Each was proven by tests that call Supabase
+directly as real users (`tests/db/security.test.ts`).
+
+| Layer | Question | Examples |
+| --- | --- | --- |
+| **Grants** | Which actions and columns may this role touch? | Logged-out (`anon`): nothing. Logged-in: read both tables; insert only the booking fields; update only `status` and `scheduled_at`; **no delete** anywhere. `profiles` is read-only, so nobody can change their own role. |
+| **RLS** | Which rows? | Your own consultations; admins can **read** all. Admins have no update policy, so the admin view is read-only even at the database level. |
+| **Trigger** | Which state changes? | The rules table above, with the database clock. Raises `LM400` (bad input) or `LM409` (not allowed now), which the API maps to `400` / `409`. |
+
+On top of that, in the app:
+
+- **The session is verified on every request** with `getClaims()`, which checks the JWT signature. A tampered cookie
+  (e.g. someone editing the user id inside it) gets a `401`; a test proves it.
+- **The service-role key never appears in app code.** It's only used by test setup, read from a gitignored file,
+  created in one file behind a localhost guard, and an ESLint rule stops any app file from importing it.
+- **Strict validation:** unknown keys in a request body are a `400`, so a client can't slip in `studentId` or `status`.
+- **Fixed an open redirect in the template:** the starter's email-confirm route redirected to any `?next=` URL, so a
+  real confirmation link could send users to another site. It now only accepts same-site paths (including the `/\`
+  bypass), with unit tests.
+
+---
+
+## Decisions and justifications
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Where roles live | `public.profiles` table with a `role` enum | User metadata is editable by the user. A table is visible in migrations and protected by grants and RLS. |
+| Who enforces security | The API **and** the database | The publishable key gives browsers a direct door to the database, so it can't rely on the API. |
+| Supabase client in the API | The user's session client | RLS then applies to every query. The service-role key would bypass it. |
+| New users | A trigger creates a `student` profile; it never reads sign-up metadata | Nobody can sign up as an admin. |
+| Making admins | Manual SQL | An admin-management UI is out of scope. |
+| Cancel | Soft cancel (`status = 'cancelled'`) | Keeps history; cancelled rows stay visible with a badge. |
+| Completion | One `status` enum, no `is_completed` flag | Invalid combinations (cancelled **and** completed) can't exist. |
+| Completion is a toggle | Complete ⇄ uncomplete | The brief says "complete/incomplete", and it's the only way to undo a mistaken tick (admins are read-only). |
+| "Awaiting completion" | A UI-only label for `scheduled` + past | "Scheduled" would be misleading for a past time. Derived, not stored, so no cron job. |
+| API style | REST route handlers, not Server Actions | One explicit HTTP contract, testable directly (as the brief prefers). |
+| PATCH body | Action-based (`{ action: "cancel" }`, …) | Each action is one transition with one rule, instead of a generic "update any field". |
+| Atomic updates | The rules are in the UPDATE's `WHERE` clause | No check-then-update race. Two simultaneous cancels give exactly one `200` and one `409` (tested). |
+| Telling `404` from `409` | If the UPDATE changes 0 rows, look the row up **filtered to the caller** | Yours but not allowed → `409`; anything else → `404`, so other users' rows never leak. |
+| Clocks | The API uses the server clock; the trigger re-checks with the database clock | PostgREST filters can't call `now()`. At the exact boundary the trigger wins, with a `409`/`400`, never a `500`. |
+| Validation | zod 4 strict objects in every route; text trimmed before length checks | Runtime validation and mass-assignment protection. The booking form runs the **same** schema in the browser, so client and server rules can't drift. |
+| Dates | `timestamptz` (UTC); the browser converts with `toISOString()`; shown with `toLocaleString()` | One unambiguous moment; each viewer sees their own timezone. No Temporal API (not in Safari yet). |
+| Auth check on the server | `getClaims()`, never `getSession()` | It verifies the JWT signature. Trade-off: a revoked token stays valid until it expires; `getUser()` would catch that at the cost of a network call per request. |
+| `/api` in the proxy | The proxy refreshes the session but doesn't redirect `/api/*` | Pages get login redirects, APIs get `401` JSON. A redirect would make `fetch` silently load the login page's HTML. |
+| UI data fetching | TanStack Query, calling only our API | All rules in one place; cache invalidated after every mutation, success or error. |
+| Admin booking | Allowed | Admin = everything a student can do + a read-only view of all. |
+| Admin pagination | Offset (`page`, `pageSize`), sorted `scheduled_at, id`; past the end → `200` with no items | Simple and standard; `id` keeps pages stable when times are equal. |
+| Admin page for non-admins | The 404 page, served with HTTP **200** | With `cacheComponents`, the role check runs inside `<Suspense>`; once streaming starts the status is fixed. It's a UX gate only: the data is protected by the API (`403`) and RLS. A real `404` would need the check in the proxy. |
+| `on delete cascade` | On `student_id` | Deleting an account removes that person's data (privacy). Soft cancel is a different case. |
+| Migrations | One migration, edited during development | Nothing was deployed or shared, so a single readable schema file is clearer. In a shared project I'd add new migrations instead. |
+| Error codes from the trigger | Custom SQLSTATE `LM400` / `LM409` | A stable contract instead of matching message text. (PostgREST's `PT` codes were considered; they'd tie the database to PostgREST.) |
+
+---
+
+## Assumptions
+
+- A **consultation** is a booked time slot with a reason. There are no tutors or availability; any future time can
+  be booked.
+- **First and last name are entered on each booking** (as the brief lists them), not taken from the account.
+- A student can have **several bookings**, even at the same time. Double-booking prevention isn't required.
+- **Cancelled bookings are final.** They can't be rescheduled or un-cancelled.
+- **A booking whose time has passed** can only be completed (or left "Awaiting completion"). It can't be cancelled or
+  rescheduled, because it already happened.
+- Times are shown in the **viewer's** timezone. Everyone looking at a booking sees the same moment.
+- **Admins are trusted operators,** made by hand. The admin view only needs to show bookings; there's no admin
+  editing.
+
+---
+
+## Testing
+
+**272 automated tests**, all against the **real local Supabase**. Nothing is mocked: mocking Supabase would remove
+exactly the grants, RLS and triggers under test.
+
+| Layer | Tests | What | How |
+| --- | --- | --- | --- |
+| Unit (`tests/unit/`) | 138 | zod schemas, row mapper, error → status mapping, state transitions, UI rules, date conversion, redirect check | Test-first (red → green → refactor) |
+| DB (`tests/db/`) | 47 | Grants, RLS and the trigger, by calling Supabase directly as real users with the publishable key | Written **after** the migration, to lock in its behaviour |
+| API (`tests/api/`) | 87 | All 4 routes over real HTTP with real session cookies: status-code order, every action in every state, ownership, concurrency, forged cookies, pagination | Test-first |
+
+Worth knowing:
+
+- **Tests were checked against deliberately broken code** (e.g. swapping `getClaims()` for `getSession()`, removing
+  a filter, an off-by-one in pagination) to make sure they fail when they should.
+- **Date tests run in `Australia/Sydney`** (set by `npm test`). In UTC, local time and UTC look the same, so a
+  conversion bug would pass unnoticed. A guard fails the file if it's run in another timezone.
+- **Test data is isolated:** each run creates throwaway users (`test-<runId>-<n>@example.test`) and deletes them
+  (cascade removes their data). The admin tests check invariants, not exact counts, so your manual data never breaks
+  them. Test files run one after another, so pagination checks can't be affected by another file's inserts.
+- **No component or end-to-end tests** (time). The UI's rules live in pure, unit-tested functions; the UI itself was
+  checked by hand with [`docs/test-plan.md`](docs/test-plan.md).
+
+### Manual verification
+
+_To be filled in after running [`docs/test-plan.md`](docs/test-plan.md)._
+
+---
+
+## What I'd do with more time
+
+- **Playwright end-to-end tests and component tests** (with MSW for the API), to automate the manual test plan.
+- **Postgres functions (RPC) for every write,** so the rules and the clock live in one place in the database instead
+  of in both the API and the trigger.
+- **Cursor pagination with an estimated count** for the admin list: exact counts get slow on huge tables, and offset
+  pages shift when rows are inserted between page loads.
+- A **tutor role** with availability, and **double-booking prevention**.
+- **Admin role management** in the UI, with an **audit log**.
+- **Rate limiting** on the API.
+- **Temporal** for recurring bookings, once Safari supports it.
+- A **page-level toast** for errors from rows whose controls disappear (e.g. a booking cancelled in another tab while
+  its dialog was open).
