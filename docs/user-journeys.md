@@ -117,7 +117,8 @@ The body is always one action: `complete`, `uncomplete`, `cancel`, or `reschedul
 
 - **Given** any error, **then** the body is `{ error: { message, details? } }`. Success is always `{ data: ... }`.
 - **Given** a request body that isn't valid JSON, **then** **400**.
-- **Given** a body with an invalid field or an unknown key, **then** **400** for the whole request, and nothing is written (see `docs/reasoning-notes.md`).
+- **Given** a body with an invalid field or an unknown key, **then** **400** for the whole request, and nothing is written. Unknown keys are rejected, not silently dropped (`z.strictObject()`): no partial writes, and
+  tampering such as sending `studentId` fails loudly.
 - **Given** a PATCH with an unknown action (e.g. `{action:"delete"}`), **then** **400**.
 - **Given** a DELETE request to any route, **then** **405**. Nothing is ever hard-deleted from the app.
 - **Given** an unexpected database error, **then** **500** with a generic message. Internal details aren't sent to the client.

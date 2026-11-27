@@ -222,7 +222,8 @@ may appear after you click **Book consultation**.
 ## 6. Admin page
 
 - [ ] **6.1 Student is kept out.** As Student A, open `/admin`: the 404 page. In Network, the `admin` document has
-      status **200** (expected: the 404 page is streamed; see `docs/reasoning-notes.md`). No "All consultations" heading.
+      status **200** (expected: with `cacheComponents`, the role check runs inside `<Suspense>`, so the 200 status is already sent
+      before `notFound()` swaps in the 404 page; the data is still protected by the API 403 and RLS). No "All consultations" heading.
 - [ ] **6.2 Admin sees everything.** As `admin@test.com`, open `/admin`: "All consultations",
       "N consultations in total. Read-only.", bookings from **both** students, a **Student** column (8 characters,
       full id on hover), **no** checkboxes or buttons.
