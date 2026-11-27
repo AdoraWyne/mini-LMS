@@ -266,7 +266,35 @@ Worth knowing:
 
 ### Manual verification
 
-_To be filled in after running [`docs/test-plan.md`](docs/test-plan.md)._
+Run by hand with [`docs/test-plan.md`](docs/test-plan.md) in Chrome, with two students and one admin.
+
+- **Sections 0-8 passed:** setup, auth and page access, API status codes vs. redirects, the dashboard list, row
+  actions, the booking form, the admin page, timezones, and calling our API directly from the DevTools Console. The
+  one exception is the optional screen-reader check (4.11, VoiceOver), which was skipped.
+- **Sections 9 and 10 were not run (time).** These are the direct Supabase REST calls (curl as Student A) and a few
+  extra checks (open redirect, lint rule, leftover test users). Most of what they check is also covered by automated
+  tests:
+  - Section 9 (grants, RLS, the business-rule trigger, when the API is bypassed): the DB tests in `tests/db/` call
+    Supabase directly as real users with the publishable key, which is the same door.
+  - 10.1 (open redirect): `tests/unit/safe-next-path.test.ts`.
+  - 10.2 (lint rule) and 10.4 (leftover test users) have no automated test. They're quick to run by hand.
+
+Running the plan turned up a few behaviours worth knowing (none of them bugs; the plan was corrected where its steps
+were wrong):
+
+- **No confirmation email locally.** Local Supabase has `enable_confirmations: false`, so a new user is confirmed and
+  logged in at sign-up. The sign-up form goes to `/dashboard` when `signUp()` returns a session, and to the "check your
+  email" page when it doesn't, so it also works with confirmations on (as they should be in production).
+- **Check constraints apply even in Studio.** Studio runs as `postgres`, which skips RLS, grants and the trigger, but
+  not the length checks: a seed with an 1,119-character reason was refused.
+- **If Supabase is down, pages redirect to login.** The proxy can't verify the session, so it treats the user as
+  logged out. This fails safe (nobody gets in unverified), at the cost of a confusing screen during an outage. The
+  dashboard's error/retry state was tested by blocking the API request in DevTools instead.
+- **Unknown `/api/*` paths return Next.js's HTML 404,** not our JSON error shape (no route handler matches). The status
+  code is right; a catch-all route returning JSON is an easy addition.
+- **A 409 from a row changed in another tab is real but hard to see.** The list refreshes after every mutation, the
+  row comes back cancelled with no actions, and the dialog showing the message is removed with it. See "page-level
+  toast" below.
 
 ---
 
